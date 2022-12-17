@@ -14,17 +14,15 @@ class CreateBanner(BaseModel):
     link: str | None
 
 
-class GetBanner(BaseModel):
-    response = {
-        "id": 1,
-        "index": 22,
-        "title": "название",
-        "description": "описание",
-        "background_image": "https://imgs.com/image.png",
-        "link": "https://vk.com/anim",
-        "created": datetime.now()
-    }
-
+class Banner(BaseModel):
+    id: int
+    index: int
+    title: str
+    description: str
+    background_image: str
+    link: str
+    created: datetime
+    
 
 class GetBanners(BaseModel):
-    response = [GetBanner().response]
+    response: list[Banner]

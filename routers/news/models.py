@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, func
 
-from database import base
+from database import base, CustomBase
 
 
-class News(base):
+class News(base, CustomBase):
     __tablename__ = 'news'
     id = Column(Integer, nullable=False, unique=True, primary_key=True, autoincrement=True)
     index = Column(Integer)
@@ -12,7 +12,3 @@ class News(base):
     preview_img = Column(String)
     link = Column(String)
     created = Column(DateTime(timezone=True), server_default=func.now())
-
-    def get_fields(self):
-        return {"id": self.id, "index": self.index, "title": self.title, "description": self.description,
-                "preview_img": self.preview_img, "link": self.link, "created": self.created}

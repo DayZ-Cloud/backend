@@ -14,17 +14,50 @@ class CreateNews(BaseModel):
     link: str | None
 
 
-class GetOneNews(BaseModel):
-    response = {
-        "id": 1,
-        "index": 22,
-        "title": "название",
-        "description": "описание",
-        "preview_img": "https://imgs.com/image.png",
-        "link": "https://vk.com/anim",
-        "created": datetime.now()
-    }
+class OneNews(BaseModel):
+    id: int
+    index: int
+    title: str
+    description: str
+    preview_img: str
+    link: str
+    created: datetime
+
+
+class GetCreated(BaseModel):
+    response: OneNews
+
+    class Config:
+        schema_extra = {
+            'examples': [
+                {"response": {
+                    "id": 1,
+                    "index": 5,
+                    "title": "Экстренное обновление ядра",
+                    "description": "Сегодня ночью произойдет обновление ядра системы. Это необходимо для сохранности "
+                                   "и безопасности ваших данных.",
+                    "preview_img": "https://i.imgur.com/S1OPVB6.jpeg",
+                    "link": "http://discord.gg/hvUr2UGHSV",
+                    "created": datetime.now()
+                }}
+            ]
+        }
 
 
 class GetNews(BaseModel):
-    response = [GetOneNews().response]
+    response: list[OneNews]
+
+    class Config:
+        schema_extra = {
+            'examples': [
+                {"response": [{
+                    "id": 1,
+                    "index": 5,
+                    "title": "Экстренное обновление ядра",
+                    "description": "Сегодня ночью произойдет обновление ядра системы. Это необходимо для сохранности и безопасности ваших данных.",
+                    "preview_img": "https://i.imgur.com/S1OPVB6.jpeg",
+                    "link": "http://discord.gg/hvUr2UGHSV",
+                    "created": datetime.now()
+                }]}
+            ]
+        }

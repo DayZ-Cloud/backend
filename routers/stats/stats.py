@@ -13,12 +13,14 @@ router = APIRouter()
 
 
 @router.get("/count/users/", response_model=GetStat)
-async def get_users_count(session: Session = Depends(get_session), credentials: JAC = Security(access_security)):
-    count_users = len((await session.execute(select(Clients))).scalars().all())
+async def get_users_count(db: Session = Depends(get_session),
+                          credentials: JAC = Security(access_security)):
+    count_users = len((await db.execute(select(Clients))).scalars().all())
     return {"response": count_users}
 
 
 @router.get("/count/servers/", response_model=GetStat)
-async def get_servers_count(session: Session = Depends(get_session), credentials: JAC = Security(access_security)):
-    count_servers = len((await session.execute(select(Servers))).scalars().all())
+async def get_servers_count(db: Session = Depends(get_session),
+                            credentials: JAC = Security(access_security)):
+    count_servers = len((await db.execute(select(Servers))).scalars().all())
     return {"response": count_servers}

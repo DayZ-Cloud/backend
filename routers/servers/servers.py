@@ -11,18 +11,21 @@ router = APIRouter()
 
 
 @router.get("/servers/", response_model=GetServers)
-async def get_servers(session: Session = Depends(get_session), credentials: JAC = Security(access_security)):
-    servers = (await get_servers_list(session, credentials["id"])).scalars().all()
+async def get_servers(db: Session = Depends(get_session),
+                      credentials: JAC = Security(access_security)):
+    servers = (await get_servers_list(db, credentials["id"])).scalars().all()
     servers = [server.get_security_fields() | server.get_online() for server in servers]
 
     return {"response": servers}
 
 
 @router.post("/servers/", response_model=CreateServerResponse)
-async def create_servers(server: CreateServer = Depends(CreateServer.as_form), session: Session = Depends(get_session), credentials: JAC = Security(access_security)):
+async def create_servers(server: CreateServer = Depends(CreateServer.as_form),
+                         db: Session = Depends(get_session),
+                         credentials: JAC = Security(access_security)):
     server = server.__dict__
     server["owner_id"] = credentials["id"]
-    new_server = await create_server(session, server)
-    await session.commit()
-    await session.refresh(new_server)
+    new_server = await create_server(db, server)
+    await db.commit()
+    await db.refresh(new_server)
     return {"response": new_server.get_fields()}

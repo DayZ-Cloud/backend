@@ -12,24 +12,19 @@ class CreateServer(BaseModel):
     rcon_password: str
 
 
+class Server(BaseModel):
+    id: int
+    server_name: str
+    ip_address: str
+    game_port: str
+    rcon_port: str
+    rcon_password: str
+    owner_id: int
+
+
 class CreateServerResponse(BaseModel):
-    response = {
-        "id": "integer",
-        "server_name": "string",
-        "ip_address": "string",
-        "game_port": "string",
-        "rcon_port": "string",
-        "rcon_password": "string",
-        "owner_id": "integer"
-    }
+    response: Server
 
 
 class GetServers(BaseModel):
-    response = [
-        {
-            "id": 2,
-            "name": 'string',
-            "players": 'integer',
-            "max_players": 'integer'
-        }
-    ]
+    response: list[Server]
