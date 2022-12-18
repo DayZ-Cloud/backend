@@ -19,8 +19,8 @@ class Banner(BaseModel):
     index: int
     title: str
     description: str
-    background_image: str
-    link: str
+    background_image: str | None
+    link: str | None
     created: datetime
     
 

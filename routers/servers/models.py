@@ -13,6 +13,7 @@ class Servers(base, CustomBase):
     ip_address = Column(String)
     game_port = Column(String)
     rcon_port = Column(String)
+    query_port = Column(String)
     rcon_password = Column(String)  # NEED encryption!
     owner_id = Column(Integer, ForeignKey('clients.id', ondelete='CASCADE'), nullable=False)
     WHITELIST = ["id", "server_name"]

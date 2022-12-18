@@ -19,8 +19,8 @@ class OneNews(BaseModel):
     index: int
     title: str
     description: str
-    preview_img: str
-    link: str
+    preview_img: str | None
+    link: str | None
     created: datetime
 
 

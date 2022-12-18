@@ -15,11 +15,8 @@ class CreateServer(BaseModel):
 class Server(BaseModel):
     id: int
     server_name: str
-    ip_address: str
-    game_port: str
-    rcon_port: str
-    rcon_password: str
-    owner_id: int
+    players: int
+    max_players: int
 
 
 class CreateServerResponse(BaseModel):
