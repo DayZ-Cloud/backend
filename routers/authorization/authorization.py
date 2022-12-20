@@ -1,16 +1,15 @@
 import re
 
 from fastapi import APIRouter, Depends, Security, HTTPException
-from fastapi_jwt import JwtAuthorizationCredentials as JAC
 from sqlalchemy.ext.asyncio import AsyncSession as Session
 from starlette.responses import JSONResponse
 
 from database import get_session
-from jwt_controller import access_security, refresh_security
+from jwt_securities import refresh_security, access_security, JAC
 from routers.authorization import service
 from routers.authorization.pydantic_models import Registration, Credentials, RegistrationReturn, TokenReturn, \
     RegistrationError
-from routers.authorization.service import get_user_by_email, check_password, create_password, get_user_by_id
+from routers.authorization.service import get_user_by_email, check_password, get_user_by_id
 
 router = APIRouter()
 
@@ -50,20 +49,15 @@ async def obtain_token(credentials: Credentials = Depends(Credentials.as_form),
     if (user_auth := await check_password(db, user["password"], user["email"])) is None:
         return JSONResponse(status_code=401, content={"detail": "This email or password not found."})
 
-    user["password"] = await create_password(user["password"])
     del user["password"]
     user["id"] = user_auth[0].id
 
-    return {"access_token": access_security.create_access_token(subject=user),
-            "refresh_token": refresh_security.create_refresh_token(subject=user)}
+    return await access_security.create_return(user)
 
 
 @router.post("/token/refresh", response_model=TokenReturn)
 async def obtain_refresh_token(credentials: JAC = Security(refresh_security)):
-    access_token = access_security.create_access_token(subject=credentials.subject)
-    refresh_token = refresh_security.create_refresh_token(subject=credentials.subject)
-
-    return {"access_token": access_token, "refresh_token": refresh_token}
+    return await refresh_security.create_return(credentials.subject)
 
 
 @router.get("/users/me", responses={200: {"model": RegistrationReturn}})

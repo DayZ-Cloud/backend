@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, Security
-from fastapi_jwt import JwtAuthorizationCredentials as JAC
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from database import engine, get_session
-from jwt_controller import access_security
+from jwt_securities import access_security, JAC
 from routers.news import service
-from routers.news.pydantic_models import CreateNews, GetNews, OneNews, GetCreated
+from routers.news.pydantic_models import CreateNews, GetNews, GetCreated
 
 router = APIRouter()
 session = sessionmaker(bind=engine, class_=AsyncSession)()

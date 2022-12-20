@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, Security
-from fastapi_jwt import JwtAuthorizationCredentials as JAC
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession as Session
 
 from database import get_session
-from jwt_controller import access_security
+from jwt_securities import access_security, JAC
 from routers.authorization.models import Clients
 from routers.servers.models import Servers
 from routers.stats.pydantic_models import GetStat
