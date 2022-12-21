@@ -1,10 +1,11 @@
 import os
+from _socket import gaierror
 
 import aiohttp
 import requests
 from fastapi import HTTPException
 from sqlalchemy import Column, Integer, String, ForeignKey
-
+from steam import game_servers as gs
 from database import base, CustomBase
 
 
@@ -21,15 +22,9 @@ class Servers(base, CustomBase):
     WHITELIST = ["id", "server_name"]
 
     async def get_online(self):
-        token = os.getenv("STEAM_API")
-        query = {"key": token, "filter": f"addr\\{self.ip_address}:{self.game_port}"}
-        async with aiohttp.ClientSession() as session:
-            url = f"https://api.steampowered.com/IGameServersService/GetServerLigest/v1/"
-            async with session.get(url, params=query) as resp:
-                server = await resp.json()
+        try:
+            server = gs.a2s_info((self.ip_address, int(self.query_port)))
+        except gaierror:
+            return {"max_players": 0, "players": 0, "status": "offline"}
 
-        if not server["response"]:
-            return {"max_players": 0, "players": 0}
-
-        server_info = server["response"]["servers"][0]
-        return {"max_players": server_info["max_players"], "players": server_info["players"]}
+        return {"max_players": server["max_players"], "players": server["players"], "status": "online"}

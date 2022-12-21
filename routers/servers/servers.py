@@ -1,8 +1,9 @@
 import os
+from _socket import gaierror
 
 import requests
 from fastapi import APIRouter, Depends, Security, HTTPException
-
+from steam import game_servers as gs
 from database import get_session
 from jwt_securities import access_security, JAC
 from routers.servers.pydantic_models import CreateServer, CreateServerResponse, GetServers
@@ -27,10 +28,9 @@ async def create_servers(server: CreateServer = Depends(CreateServer.as_form),
                          credentials: JAC = Security(access_security)):
     server = server.__dict__
     server["owner_id"] = credentials["id"]
-    token = os.getenv("STEAM_API")
-    query = {"key": token, "filter": f"addr\\{server['ip_address']}:{server['game_port']}"}
-    resp = requests.get(f"https://api.steampowered.com/IGameServersService/GetServerList/v1/", params=query)
-    if not resp.json()["response"]:
+    try:
+        gs.a2s_info((server["ip_address"], int(server["query_port"])))
+    except gaierror:
         raise HTTPException(status_code=400, detail="Server not found or steam services not answer.")
 
     new_server = await create_server(db, server)

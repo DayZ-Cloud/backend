@@ -19,6 +19,7 @@ class CreateServer(BaseModel):
     game_port: str
     rcon_port: str
     rcon_password: str
+    query_port: str
 
 
 class Server(BaseModel):
@@ -26,6 +27,7 @@ class Server(BaseModel):
     server_name: str
     players: int
     max_players: int
+    status: str
 
 
 class CreateServerResponse(BaseModel):
