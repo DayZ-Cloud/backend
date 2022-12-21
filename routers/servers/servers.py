@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, Security
+import os
+
+import requests
+from fastapi import APIRouter, Depends, Security, HTTPException
 
 from database import get_session
 from jwt_securities import access_security, JAC
@@ -13,7 +16,7 @@ router = APIRouter()
 async def get_servers(db: Session = Depends(get_session),
                       credentials: JAC = Security(access_security)):
     servers = (await get_servers_list(db, credentials["id"])).scalars().all()
-    servers = [server.get_security_fields() | server.get_online() for server in servers]
+    servers = [server.get_security_fields() | await server.get_online() for server in servers]
 
     return {"response": servers}
 
@@ -24,6 +27,12 @@ async def create_servers(server: CreateServer = Depends(CreateServer.as_form),
                          credentials: JAC = Security(access_security)):
     server = server.__dict__
     server["owner_id"] = credentials["id"]
+    token = os.getenv("STEAM_API")
+    query = {"key": token, "filter": f"addr\\{server['ip_address']}:{server['game_port']}"}
+    resp = requests.get(f"https://api.steampowered.com/IGameServersService/GetServerList/v1/", params=query)
+    if not resp.json()["response"]:
+        raise HTTPException(status_code=400, detail="Server not found or steam services not answer.")
+
     new_server = await create_server(db, server)
     await db.commit()
     await db.refresh(new_server)

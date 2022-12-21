@@ -1,6 +1,8 @@
 import os
 
+import aiohttp
 import requests
+from fastapi import HTTPException
 from sqlalchemy import Column, Integer, String, ForeignKey
 
 from database import base, CustomBase
@@ -18,9 +20,16 @@ class Servers(base, CustomBase):
     owner_id = Column(Integer, ForeignKey('clients.id', ondelete='CASCADE'), nullable=False)
     WHITELIST = ["id", "server_name"]
 
-    def get_online(self):
+    async def get_online(self):
         token = os.getenv("STEAM_API")
         query = {"key": token, "filter": f"addr\\{self.ip_address}:{self.game_port}"}
-        resp = requests.get(f"https://api.steampowered.com/IGameServersService/GetServerList/v1/", params=query)
-        server_info = resp.json()["response"]["servers"][0]
+        async with aiohttp.ClientSession() as session:
+            url = f"https://api.steampowered.com/IGameServersService/GetServerLigest/v1/"
+            async with session.get(url, params=query) as resp:
+                server = await resp.json()
+
+        if not server["response"]:
+            return {"max_players": 0, "players": 0}
+
+        server_info = server["response"]["servers"][0]
         return {"max_players": server_info["max_players"], "players": server_info["players"]}

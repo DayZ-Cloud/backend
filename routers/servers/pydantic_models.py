@@ -3,6 +3,15 @@ from pydantic import BaseModel
 from depends import as_form
 
 
+class ResponseCreateServer(BaseModel):
+    id: int
+    server_name: str
+    ip_address: str
+    game_port: str
+    rcon_port: str
+    rcon_password: str
+
+
 @as_form
 class CreateServer(BaseModel):
     server_name: str
@@ -20,7 +29,7 @@ class Server(BaseModel):
 
 
 class CreateServerResponse(BaseModel):
-    response: Server
+    response: ResponseCreateServer
 
 
 class GetServers(BaseModel):
