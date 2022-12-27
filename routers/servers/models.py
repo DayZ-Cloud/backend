@@ -5,13 +5,14 @@ import aiohttp
 import requests
 from fastapi import HTTPException
 from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from steam import game_servers as gs
 from database import base, CustomBase
 
 
 class Servers(base, CustomBase):
     __tablename__ = 'servers'
-    id = Column(Integer, nullable=False, unique=True, primary_key=True, autoincrement=True)
+    uuid = Column(UUID, nullable=False, unique=True, primary_key=True)
     server_name = Column(String)
     ip_address = Column(String)
     game_port = Column(String)
@@ -19,7 +20,7 @@ class Servers(base, CustomBase):
     query_port = Column(String)
     rcon_password = Column(String)  # NEED encryption!
     owner_id = Column(Integer, ForeignKey('clients.id', ondelete='CASCADE'), nullable=False)
-    WHITELIST = ["id", "server_name"]
+    WHITELIST = ["server_name", "uuid"]
 
     async def get_online(self):
         try:

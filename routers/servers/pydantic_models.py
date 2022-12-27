@@ -4,12 +4,12 @@ from depends import as_form
 
 
 class ResponseCreateServer(BaseModel):
-    id: int
     server_name: str
     ip_address: str
     game_port: str
     rcon_port: str
     rcon_password: str
+    uuid: str
 
 
 @as_form
@@ -23,11 +23,11 @@ class CreateServer(BaseModel):
 
 
 class Server(BaseModel):
-    id: int
     server_name: str
     players: int
     max_players: int
     status: str
+    uuid: str
 
 
 class CreateServerResponse(BaseModel):

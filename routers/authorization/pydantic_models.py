@@ -29,6 +29,11 @@ class RegistrationReturn(BaseModel):
     last_auth: None
 
 
+@as_form
+class RecentFields(BaseModel):
+    email: str
+
+
 class TokenReturn(BaseModel):
     access_token: str
     refresh_token: str

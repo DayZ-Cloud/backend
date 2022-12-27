@@ -10,6 +10,9 @@ from jose import jwt
 from jose.exceptions import JWKError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
+from database import get_session, async_session
+from routers.authorization.service import get_user_by_id
+
 
 # access_security = JwtAccessBearerCookie(secret_key=os.getenv("ACCESS_KEY"), auto_error=True)
 # refresh_security = JwtRefreshBearerCookie(secret_key=os.getenv("ACCESS_KEY"), auto_error=True)
@@ -116,9 +119,14 @@ class DefaultVerifier:
 class AccessVerifier(DefaultVerifier, JWTController):
     async def __call__(self, _bearer: JwtBearer = Security(JwtBearer())):
         if _bearer is None:
-            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED,
-                                detail="Credentials are not provided.")
-        return await self._get_credentials(_bearer.credentials, "access")
+            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Credentials are not provided.")
+
+        user_id = await self._get_credentials(_bearer.credentials, "access")
+
+        if (await get_user_by_id(async_session(), user_id["id"])).all():
+            return user_id
+
+        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="User not exists")
 
 
 class RefreshVerifier(DefaultVerifier, JWTController):
