@@ -14,7 +14,7 @@ from routers.authorization import service
 from routers.authorization.pydantic_models import Registration, Credentials, RegistrationReturn, TokenReturn, \
     RegistrationError, RecentFields
 from routers.authorization.service import get_user_by_email, check_password, get_user_by_id, create_recent, \
-    check_recent, check_reset
+    check_recent, check_reset, set_auth
 
 router = APIRouter()
 
@@ -57,11 +57,15 @@ async def obtain_token(credentials: Credentials = Depends(Credentials.as_form),
     del user["password"]
     user["id"] = user_auth[0].id
 
+    await set_auth(db, user["email"])
+
     return await access_security.create_return(user)
 
 
 @router.post("/token/refresh", response_model=TokenReturn)
-async def obtain_refresh_token(credentials: JAC = Security(refresh_security)):
+async def obtain_refresh_token(db: Session = Depends(get_session), credentials: JAC = Security(refresh_security)):
+    await set_auth(db, credentials.subject["email"])
+
     return await refresh_security.create_return(credentials.subject)
 
 

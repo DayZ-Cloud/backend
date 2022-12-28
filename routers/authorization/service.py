@@ -78,3 +78,10 @@ async def check_reset(session: Session, old_password: str, new_password: str, us
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Password not correct")
     instance[0].password = await create_password(new_password)
     await session.commit()
+
+
+async def set_auth(session: Session, email: str):
+    user = await get_user_by_email(session, email)
+
+    user.all()[0][0].last_auth = datetime.datetime.now()
+    await session.commit()
