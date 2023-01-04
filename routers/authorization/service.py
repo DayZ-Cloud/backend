@@ -1,9 +1,10 @@
 import datetime
 import hashlib
 import os
+import uuid
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.ext.asyncio import AsyncSession as Session
 from starlette.status import HTTP_400_BAD_REQUEST
 
@@ -39,6 +40,18 @@ async def check_password(session, password: str, email: str):
 
 async def get_user_by_id(session: Session, user_id: int):
     return await session.execute(select(Clients).where(Clients.id == user_id))
+
+
+async def check_user_exists(session: Session, email: str = None, user_id: str = None):
+    query = []
+
+    if email is not None:
+        query.append(Clients.email == email)
+
+    if user_id is not None:
+        query.append(Clients.id == user_id)
+
+    return await session.execute(exists().where(*query).select())
 
 
 async def get_user_by_email(session: Session, email: str):

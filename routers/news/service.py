@@ -10,6 +10,6 @@ async def get_all_news(session: Session) -> list[News]:
 
 
 async def add_news(session: Session, news) -> News:
-    new_news = News(**news.__dict__)
+    new_news = News(**news)
     session.add(new_news)
     return new_news

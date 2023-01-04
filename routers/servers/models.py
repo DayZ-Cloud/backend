@@ -19,7 +19,7 @@ class Servers(base, CustomBase):
     rcon_port = Column(String)
     query_port = Column(String)
     rcon_password = Column(String)  # NEED encryption!
-    owner_id = Column(Integer, ForeignKey('clients.id', ondelete='CASCADE'), nullable=False)
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('clients.id', ondelete='CASCADE'), nullable=False)
     WHITELIST = ["server_name", "uuid"]
 
     async def get_online(self):

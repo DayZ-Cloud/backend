@@ -10,6 +10,6 @@ async def get_all_banners(session: Session) -> list[Banners]:
 
 
 async def add_banner(session: Session, banner) -> Banners:
-    new_banner = Banners(**banner.__dict__)
+    new_banner = Banners(**banner)
     session.add(new_banner)
     return new_banner

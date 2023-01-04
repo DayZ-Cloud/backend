@@ -22,7 +22,7 @@ def as_form(cls: Type[BaseModel]):
          )
 
     async def as_form_func(**data):
-        return cls(**data)
+        return cls(**data).__dict__
 
     sig = inspect.signature(as_form_func)
     sig = sig.replace(parameters=new_parameters)
