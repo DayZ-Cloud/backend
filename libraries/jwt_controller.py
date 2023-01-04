@@ -122,9 +122,9 @@ class AccessVerifier(DefaultVerifier, JWTController):
             raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Credentials are not provided.")
 
         user_id = await self._get_credentials(_bearer.credentials, "access")
-
-        if (await get_user_by_id(async_session(), user_id["id"])).all():
-            return user_id
+        return user_id
+        # if (await get_user_by_id(async_session(), user_id["id"])).scalars().all():
+        #     return user_id
 
         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="User not exists")
 

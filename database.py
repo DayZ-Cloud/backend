@@ -7,10 +7,11 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 load_dotenv()
 
 engine = create_async_engine(
-    f"postgresql+asyncpg://{getenv('DB_USER')}:{getenv('DB_PASSWORD')}@{getenv('DB_HOST')}/{getenv('DB_NAME')}"
+    f"postgresql+asyncpg://{getenv('DB_USER')}:{getenv('DB_PASSWORD')}@{getenv('DB_HOST')}/{getenv('DB_NAME')}",
+    echo=False
 )
 async_session = sessionmaker(bind=engine, class_=AsyncSession)
-base = declarative_base(bind=engine)
+base = declarative_base()
 
 
 async def init_models():
@@ -20,7 +21,7 @@ async def init_models():
 
 
 async def get_session() -> AsyncSession:
-    async with async_session() as session:
+    async with async_session(expire_on_commit=False) as session:
         yield session
 
 
