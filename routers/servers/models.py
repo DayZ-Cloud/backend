@@ -9,7 +9,7 @@ from database import base, CustomBase
 
 class Servers(base, CustomBase):
     __tablename__ = 'servers'
-    uuid = Column(UUID, nullable=False, unique=True, primary_key=True, default=uuid.uuid4)
+    uuid = Column(UUID(as_uuid=True), nullable=False, unique=True, primary_key=True, default=uuid.uuid4)
     server_name = Column(String)
     ip_address = Column(String)
     game_port = Column(String)

@@ -1,23 +1,18 @@
-from _socket import gaierror
-
 from fastapi import APIRouter, Depends, Security, HTTPException, Form
-from steam import game_servers as gs
-from database import get_session
 from jwt_securities import access_security, JAC
-from routers.servers.pydantic_models import CreateServer, CreateServerResponse, GetServers
+from routers.servers.pydantic_models import CreateServer, GetServers, ResponseCreateServer
 from routers.servers.responses import Responses
-from routers.servers.service import get_servers_list, create_server, delete_server_db, get_server_by_uuid
-from sqlalchemy.ext.asyncio import AsyncSession as Session
+from routers.servers.service import Service
 
 from routers.servers.utils import customClient
+from routers.servers.validators import check_server_exists
 
 router = APIRouter()
 
 
 @router.get("/servers/", response_model=GetServers)
-async def get_servers(db: Session = Depends(get_session),
-                      credentials: JAC = Security(access_security)):
-    servers = (await get_servers_list(db, credentials["id"])).scalars().all()
+async def get_servers(service: Service = Depends(Service), credentials: JAC = Security(access_security)):
+    servers = await service.get_servers_list(credentials["id"])
     servers = [server.get_security_fields() | await server.get_online() for server in servers]
 
     return {"response": servers}
@@ -25,34 +20,28 @@ async def get_servers(db: Session = Depends(get_session),
 
 @router.delete("/servers/{uuid}")
 async def delete_server(uuid: str,
-                        db: Session = Depends(get_session),
+                        service: Service = Depends(Service),
                         credentials: JAC = Security(access_security)):
-    await delete_server_db(db, credentials["id"], uuid)
-    await db.commit()
+    await service.delete_server_db(credentials["id"], uuid)
     return {"response": Responses.DEFAULT_OK}
 
 
-@router.post("/servers/", response_model=CreateServerResponse)
-async def create_servers(server: CreateServer = Depends(CreateServer.as_form),
-                         db: Session = Depends(get_session),
+@router.post("/servers/", response_model=ResponseCreateServer)
+async def create_servers(server: dict = Depends(CreateServer.as_form),
+                         service: Service = Depends(Service),
                          credentials: JAC = Security(access_security)):
     server["owner_id"] = credentials["id"]
-    try:
-        gs.a2s_info((server["ip_address"], int(server["query_port"])))
-    except (TimeoutError, ConnectionRefusedError, gaierror):
-        raise HTTPException(status_code=400, detail="Server not found or steam services not answer.")
+    await check_server_exists(server["ip_address"], int(server["query_port"]))
 
-    new_server = await create_server(db, server)
-    await db.commit()
-    await db.refresh(new_server)
-    return {"response": new_server.get_fields()}
+    new_server = await service.create_server(server)
+    return new_server.get_fields()
 
 
 @router.get("/servers/{uuid}/players/")
 async def get_players(uuid: str,
-                      db: Session = Depends(get_session),
+                      service: Service = Depends(Service),
                       credentials: JAC = Security(access_security)):
-    server = await get_server_by_uuid(db, uuid, credentials["id"])
+    # дserver = await service.get_server_by_uuid(uuid, credentials["id"])
     return {"response": {
         "sessions": [
             {
@@ -70,7 +59,8 @@ async def get_players(uuid: str,
                         "vac": 0
                     },
                     "profile": {
-                        "avatar": "https://avatars.akamai.steamstatic.com/206c3cfc3653a7c2e8ccfae9551873efa6abd9c2_full.jpg",
+                        "avatar": "https://avatars.akamai.steamstatic.com"
+                                  "/206c3cfc3653a7c2e8ccfae9551873efa6abd9c2_full.jpg",
                         "name": "boriz",
                         "private": False
                     }
@@ -88,9 +78,9 @@ async def get_players(uuid: str,
 
 @router.post("/servers/{uuid}/send-message/")
 async def say_rcon(uuid: str, text: str = Form(...),
-                   db: Session = Depends(get_session),
+                   service: Service = Depends(Service),
                    credentials: JAC = Security(access_security)):
-    server = await get_server_by_uuid(db, uuid, credentials["id"])
+    server = await service.get_server_by_uuid(uuid, credentials["id"])
 
     if not text:
         raise HTTPException(status_code=400, detail='Text is null')

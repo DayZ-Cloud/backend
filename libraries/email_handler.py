@@ -6,9 +6,9 @@ EMAIL_HOST = 'smtp.yandex.ru'
 
 
 def send_email(text, email):
-    message = MIMEText(text, 'plain')
+    message = MIMEText(str(text), 'plain')
     message["Subject"] = "Ваше лисье величество"
-    message["From"] = "<Ваше лисье величество> darklorian@darklorian.ru"
+    message["From"] = "darklorian@darklorian.ru"
 
     conn = smtplib.SMTP_SSL(EMAIL_HOST)
     conn.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"))

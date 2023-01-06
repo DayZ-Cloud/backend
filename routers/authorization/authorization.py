@@ -2,7 +2,7 @@ import datetime
 import random
 import uuid
 
-from fastapi import APIRouter, Depends, Security, Form, HTTPException
+from fastapi import APIRouter, Depends, Security, Form
 
 from jwt_securities import refresh_security, access_security, JAC
 from libraries.email_handler import send_email
@@ -66,8 +66,8 @@ async def recent_password(service: Service = Depends(Service), recent: RecentFie
 
 
 @router.post("/recent/{uuid}/{key}")
-async def set_new_password(uuid: str, key: str, password: str = Form(...), service: Service = Depends(Service)):
-    await service.check_recent(uuid, key, password)
+async def set_new_password(recent_uuid: str, key: str, password: str = Form(...), service: Service = Depends(Service)):
+    await service.check_recent(recent_uuid, key, password)
     return {"response": Responses.DEFAULT_OK}
 
 

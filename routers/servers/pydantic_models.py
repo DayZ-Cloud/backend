@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel
 
 from depends import as_form
@@ -9,7 +11,7 @@ class ResponseCreateServer(BaseModel):
     game_port: str
     rcon_port: str
     rcon_password: str
-    uuid: str
+    uuid: UUID
 
 
 @as_form
@@ -28,10 +30,6 @@ class Server(BaseModel):
     max_players: int
     status: str
     uuid: str
-
-
-class CreateServerResponse(BaseModel):
-    response: ResponseCreateServer
 
 
 class GetServers(BaseModel):

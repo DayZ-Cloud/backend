@@ -14,29 +14,28 @@ from routers.authorization.models import Clients, Recent
 class PasswordMethods:
     def __init__(self, session: Session):
         self.session = session
+        self.token = os.getenv("ACCESS_KEY").encode()
 
     async def create_password(self, password: str) -> hex:
         """
         :param password: пароль для шифровки
         :return: зашифрованный пароль
         """
-        return hashlib.sha256(os.getenv("ACCESS_KEY").encode() + password.encode()).hexdigest()
+        return hashlib.sha256(self.token + password.encode()).hexdigest()
 
     async def check_password(self, password: str, email: str):
         """
-        :param session: асинк сессия для БДшки
         :param password: пароль для сравнения (хэшируется и сравнивается с базой данных)
         :param email: логин для сравнения (кому принадлежит пароль)
         :return: Model instance
         """
         password = await self.create_password(password)
-        is_exists = await self.session.execute(select(Clients).where(Clients.email == email, Clients.password == password))
-        return is_exists.scalars().first()
+        query = await self.session.execute(select(Clients).where(Clients.email == email, Clients.password == password))
+        return query.scalars().first()
 
 
 class Service:
     def __init__(self, session: Session = Depends(get_session)):
-        self.model = Clients
         self.session = session
         self.password_manager = PasswordMethods(session)
 
@@ -52,10 +51,14 @@ class Service:
 
     async def check_reset(self, old_password: str, new_password: str, user_email: str):
         instance = await self.password_manager.check_password(password=old_password, email=user_email)
-        if not instance:
-            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Password not correct")
 
-        instance[0].password = await self.password_manager.create_password(new_password)
+        if not instance:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Old password not correct")
+
+        if old_password == new_password:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="The old and new passwords are the same")
+
+        instance.password = await self.password_manager.create_password(new_password)
         await self.session.commit()
 
     async def get_user_by_id(self, user_id: int):
@@ -85,8 +88,7 @@ class Service:
         return query.scalar()
 
     async def create_recent(self, email: str, token_data):
-        query = await self.get_user_by_email(email)
-        instance = query.scalars().first()
+        instance = await self.get_user_by_email(email)
         if not instance:
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User not exists")
 
