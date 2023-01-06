@@ -11,7 +11,6 @@ from jose.exceptions import JWKError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from database import get_session, async_session
-from routers.authorization.service import get_user_by_id
 
 
 # access_security = JwtAccessBearerCookie(secret_key=os.getenv("ACCESS_KEY"), auto_error=True)

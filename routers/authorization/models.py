@@ -1,8 +1,7 @@
 import uuid
 
-from sqlalchemy import Column, String, Integer, DateTime, func, ForeignKey
+from sqlalchemy import Column, String, DateTime, func, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 
 from database import base, CustomBase
 
@@ -27,4 +26,3 @@ class Recent(base, CustomBase):
     key = Column(String)
     expired_at = Column(DateTime)
     client_id = Column(UUID(as_uuid=True), ForeignKey('clients.id'))
-    client = relationship("clients", backref="client_id")

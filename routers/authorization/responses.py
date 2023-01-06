@@ -1,2 +1,2 @@
 class Responses:
-    DEFAULT_OK = {"response": "ok"}
+    DEFAULT_OK = "ok"

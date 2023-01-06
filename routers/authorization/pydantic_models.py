@@ -19,6 +19,12 @@ class Credentials(BaseModel):
     password: str
 
 
+@as_form
+class ResetPassword(BaseModel):
+    old_password: str
+    new_password: str
+
+
 class RegistrationReturn(BaseModel):
     avatar: None
     id: int

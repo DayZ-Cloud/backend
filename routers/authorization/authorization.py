@@ -1,104 +1,78 @@
 import datetime
 import random
-import re
 import uuid
 
-from fastapi import APIRouter, Depends, Security, HTTPException, Form
-from sqlalchemy.ext.asyncio import AsyncSession as Session
-from starlette.responses import JSONResponse
+from fastapi import APIRouter, Depends, Security, Form, HTTPException
 
-from database import get_session
 from jwt_securities import refresh_security, access_security, JAC
 from libraries.email_handler import send_email
-from routers.authorization import service
 from routers.authorization.pydantic_models import Registration, Credentials, RegistrationReturn, TokenReturn, \
-    RegistrationError, RecentFields
+    RegistrationError, RecentFields, ResetPassword
 from routers.authorization.responses import Responses
-from routers.authorization.service import check_password, get_user_by_id, create_recent, check_recent, check_reset, \
-    set_auth, check_user_exists
+from routers.authorization.service import Service
+from routers.authorization.utils import generate_recent_url
+from routers.authorization.validators import registration_validate, authorization_validate
 
 router = APIRouter()
 
 
-async def user_exists(user: Registration = Depends(Registration.as_form), db: Session = Depends(get_session)):
-    user = await check_user_exists(db, user["email"])
+@router.post("/registration/", responses={200: {"model": RegistrationReturn}, 400: {"model": RegistrationError}})
+async def registration(user: dict = Depends(Registration.as_form),
+                       service: Service = Depends(Service)):
+    await registration_validate(user, service)
+    new_user = await service.create_user(user)
 
-    if user.scalar():
-        raise HTTPException(status_code=400, detail="This email already exists")
-
-
-async def valid_fields(user: Registration = Depends(Registration.as_form)):
-    if not re.match(r"^([a-z0-9_-]+\.)*[a-z0-9_-]+@[a-z0-9_-]+(\.[a-z0-9_-]+)*\.[a-z]{2,6}$", user["email"]):
-        raise HTTPException(status_code=400, detail="Not a valid email address")
-
-    if len(user["password"]) < 7 or len(user["password"]) > 32:
-        raise HTTPException(status_code=400, detail="Password length must be between 7 or 32")
-
-
-@router.post("/registration/", responses={200: {"model": RegistrationReturn}, 400: {"model": RegistrationError}},
-             dependencies=[Depends(valid_fields), Depends(user_exists)])
-async def registration(user: Registration = Depends(Registration.as_form),
-                       db: Session = Depends(get_session)):
-    user["password"] = await service.create_password(password=user["password"])
-    new_user = await service.create_user(db, user)
-
-    await db.commit()
-    await db.refresh(new_user)
     return new_user
 
 
 @router.post("/token/", response_model=TokenReturn)
-async def obtain_token(user: Credentials = Depends(Credentials.as_form),
-                       db: Session = Depends(get_session)):
-    if (user_auth := await check_password(db, user["password"], user["email"])) is None:
-        return JSONResponse(status_code=401, content={"detail": "This email or password not found."})
+async def obtain_token(user: dict = Depends(Credentials.as_form),
+                       service: Service = Depends(Service)):
+    user_instance = await authorization_validate(user, service)
 
     del user["password"]
-    user["id"] = user_auth[0].id
+    user["id"] = str(user_instance.id)
 
-    await set_auth(db, user["email"])
+    await service.set_auth(user["email"])
 
     return await access_security.create_return(user)
 
 
 @router.post("/token/refresh", response_model=TokenReturn)
-async def obtain_refresh_token(db: Session = Depends(get_session), credentials: JAC = Security(refresh_security)):
-    await set_auth(db, credentials.subject["email"])
+async def obtain_refresh_token(service: Service = Depends(Service), credentials: JAC = Security(refresh_security)):
+    await service.set_auth(credentials.subject["email"])
 
     return await refresh_security.create_return(credentials.subject)
 
 
 @router.get("/users/me", responses={200: {"model": RegistrationReturn}})
-async def get_account(db: Session = Depends(get_session), credentials: JAC = Security(access_security)):
-    user = await get_user_by_id(session=db, user_id=credentials["id"])
-    return {"response": user.first()[0].get_security_fields()}
+async def get_account(service: Service = Depends(Service), credentials: JAC = Security(access_security)):
+    instance = await service.get_user_by_id(credentials["id"])
 
-
-def generate_recent_url(data: dict) -> str:
-    return f"https://hotlinetrade.страж.shop/api/v1/recent/{data['token']}/{data['key']}/"
+    return {"response": instance.get_security_fields()}
 
 
 @router.post("/recent")
-async def recent_password(db: Session = Depends(get_session), recent: RecentFields = Depends(RecentFields.as_form)):
+async def recent_password(service: Service = Depends(Service), recent: RecentFields = Depends(RecentFields.as_form)):
     data = {"token": str(uuid.uuid4()),
             "key": str(random.randint(100000, 999999)),
             "expired_at": datetime.datetime.now() + datetime.timedelta(hours=2)}
 
-    await create_recent(db, recent.email, data)
+    await service.create_recent(recent["email"], data)
     url = generate_recent_url(data)
-    send_email(email=recent.email, text=url)
-    await db.commit()
-    return Responses.DEFAULT_OK
+    send_email(email=recent["email"], text=url)
+
+    return {"response": Responses.DEFAULT_OK}
 
 
 @router.post("/recent/{uuid}/{key}")
-async def set_new_password(uuid: str, key: str, password: str = Form(...), db: Session = Depends(get_session)):
-    await check_recent(db, uuid, key, password)
-    return Responses.DEFAULT_OK
+async def set_new_password(uuid: str, key: str, password: str = Form(...), service: Service = Depends(Service)):
+    await service.check_recent(uuid, key, password)
+    return {"response": Responses.DEFAULT_OK}
 
 
 @router.post("/reset/password/")
-async def reset_password(old_password: str = Form(...), new_password: str = Form(),
-                         db: Session = Depends(get_session), credentials: JAC = Security(access_security)):
-    await check_reset(db, old_password, new_password, credentials["email"])
-    return Responses.DEFAULT_OK
+async def reset_password(reset: ResetPassword = Depends(ResetPassword.as_form),
+                         service: Service = Depends(Service), credentials: JAC = Security(access_security)):
+    await service.check_reset(reset["old_password"], reset["new_password"], credentials["email"])
+    return {"response": Responses.DEFAULT_OK}

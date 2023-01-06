@@ -1,13 +1,11 @@
-import os
 from _socket import gaierror
 
-import requests
 from fastapi import APIRouter, Depends, Security, HTTPException, Form
-from rcon.battleye import Client
 from steam import game_servers as gs
 from database import get_session
 from jwt_securities import access_security, JAC
 from routers.servers.pydantic_models import CreateServer, CreateServerResponse, GetServers
+from routers.servers.responses import Responses
 from routers.servers.service import get_servers_list, create_server, delete_server_db, get_server_by_uuid
 from sqlalchemy.ext.asyncio import AsyncSession as Session
 
@@ -31,14 +29,13 @@ async def delete_server(uuid: str,
                         credentials: JAC = Security(access_security)):
     await delete_server_db(db, credentials["id"], uuid)
     await db.commit()
-    return {"response": "ok"}
+    return {"response": Responses.DEFAULT_OK}
 
 
 @router.post("/servers/", response_model=CreateServerResponse)
 async def create_servers(server: CreateServer = Depends(CreateServer.as_form),
                          db: Session = Depends(get_session),
                          credentials: JAC = Security(access_security)):
-    server = server.__dict__
     server["owner_id"] = credentials["id"]
     try:
         gs.a2s_info((server["ip_address"], int(server["query_port"])))
@@ -101,4 +98,4 @@ async def say_rcon(uuid: str, text: str = Form(...),
     with customClient(server.ip_address, int(server.rcon_port), passwd=server.rcon_password) as cl:
         cl.run('say', '-1', text)
 
-    return {"response": 'ok', "text": text}
+    return {"response": "ok", "text": text}

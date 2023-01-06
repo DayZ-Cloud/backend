@@ -1,100 +1,117 @@
 import datetime
 import hashlib
 import os
-import uuid
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
 from sqlalchemy import select, exists
 from sqlalchemy.ext.asyncio import AsyncSession as Session
 from starlette.status import HTTP_400_BAD_REQUEST
 
+from database import get_session
 from routers.authorization.models import Clients, Recent
 
 
-async def create_user(session: Session, user):
-    user["first_name"] = user["first_name"].capitalize()
-    user["last_name"] = user["last_name"].capitalize()
-    client = Clients(**user)
-    session.add(client)
-    return client
+class PasswordMethods:
+    def __init__(self, session: Session):
+        self.session = session
+
+    async def create_password(self, password: str) -> hex:
+        """
+        :param password: пароль для шифровки
+        :return: зашифрованный пароль
+        """
+        return hashlib.sha256(os.getenv("ACCESS_KEY").encode() + password.encode()).hexdigest()
+
+    async def check_password(self, password: str, email: str):
+        """
+        :param session: асинк сессия для БДшки
+        :param password: пароль для сравнения (хэшируется и сравнивается с базой данных)
+        :param email: логин для сравнения (кому принадлежит пароль)
+        :return: Model instance
+        """
+        password = await self.create_password(password)
+        is_exists = await self.session.execute(select(Clients).where(Clients.email == email, Clients.password == password))
+        return is_exists.scalars().first()
 
 
-async def create_password(password: str) -> hex:
-    """
-    :param password: пароль для шифровки
-    :return: зашифрованный пароль
-    """
-    return hashlib.sha256(os.getenv("ACCESS_KEY").encode() + password.encode()).hexdigest()
+class Service:
+    def __init__(self, session: Session = Depends(get_session)):
+        self.model = Clients
+        self.session = session
+        self.password_manager = PasswordMethods(session)
 
+    async def create_user(self, user):
+        user["first_name"] = user["first_name"].capitalize()
+        user["last_name"] = user["last_name"].capitalize()
+        user["password"] = await self.password_manager.create_password(password=user["password"])
+        client = Clients(**user)
+        self.session.add(client)
+        await self.session.commit()
+        await self.session.refresh(client)
+        return client
 
-async def check_password(session, password: str, email: str):
-    """
-    :param session: асинк сессия для БДшки
-    :param password: пароль для сравнения (хэшируется и сравнивается с базой данных)
-    :param email: логин для сравнения (кому принадлежит пароль)
-    :return: подошел ли пароль / логин
-    """
-    password = await create_password(password)
-    return (await session.execute(select(Clients).where(Clients.email == email, Clients.password == password))).first()
+    async def check_reset(self, old_password: str, new_password: str, user_email: str):
+        instance = await self.password_manager.check_password(password=old_password, email=user_email)
+        if not instance:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Password not correct")
 
+        instance[0].password = await self.password_manager.create_password(new_password)
+        await self.session.commit()
 
-async def get_user_by_id(session: Session, user_id: int):
-    return await session.execute(select(Clients).where(Clients.id == user_id))
+    async def get_user_by_id(self, user_id: int):
+        query = await self.session.execute(select(Clients).where(Clients.id == user_id))
+        return query.scalars().first()
 
+    async def get_user_by_email(self, email: str):
+        query = await self.session.execute(select(Clients).where(Clients.email == email))
+        return query.scalars().first()
 
-async def check_user_exists(session: Session, email: str = None, user_id: str = None):
-    query = []
+    async def set_auth(self, email: str):
+        user = await self.get_user_by_email(email)
 
-    if email is not None:
-        query.append(Clients.email == email)
+        user.last_auth = datetime.datetime.now()
+        await self.session.commit()
 
-    if user_id is not None:
-        query.append(Clients.id == user_id)
+    async def check_user_exists(self, email: str = None, user_id: str = None):
+        query = []
 
-    return await session.execute(exists().where(*query).select())
+        if email is not None:
+            query.append(Clients.email == email)
 
+        if user_id is not None:
+            query.append(Clients.id == user_id)
 
-async def get_user_by_email(session: Session, email: str):
-    return await session.execute(select(Clients).where(Clients.email == email))
+        query = await self.session.execute(exists().where(*query).select())
+        return query.scalar()
 
+    async def create_recent(self, email: str, token_data):
+        query = await self.get_user_by_email(email)
+        instance = query.scalars().first()
+        if not instance:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User not exists")
 
-async def create_recent(session: Session, email: str, token_data):
-    if not (user := (await get_user_by_email(session, email)).all()):
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User not exists")
-    token_data["client_id"] = user[0][0].id
-    recent = Recent(**token_data)
-    session.add(recent)
-    return recent
+        token_data["client_id"] = instance.id
+        recent = Recent(**token_data)
 
+        self.session.add(recent)
+        await self.session.commit()
+        return recent
 
-async def check_recent(session: Session, uuid: str, key: str, password: str):
-    token = await session.execute(select(Recent).where(Recent.token == uuid, Recent.key == key))
-    if not (token := token.all()):
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="This token or key not found.")
+    async def check_recent(self, uuid: str, key: str, password: str):
+        query = await self.session.execute(select(Recent).where(Recent.token == uuid, Recent.key == key))
+        token = query.scalars().first()
+        if not token:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="This token or key not found.")
 
-    token = token[0][0]
-    if token.expired_at < datetime.datetime.now():
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="This token and key expired")
+        if token.expired_at < datetime.datetime.now():
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="This token and key expired")
 
-    user = await session.execute(select(Clients).where(Clients.id == token.client_id))
-    if not (user := user.all()):
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User not found.")
+        user_query = await self.session.execute(select(Clients).where(Clients.id == token.client_id))
+        user = user_query.scalars().first()
 
-    user = user[0][0]
-    user.password = await create_password(password)
-    await session.delete(token)
-    await session.commit()
+        if not user:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User not found.")
 
-
-async def check_reset(session: Session, old_password: str, new_password: str, user_email: str):
-    if not (instance := await check_password(session, password=old_password, email=user_email)):
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Password not correct")
-    instance[0].password = await create_password(new_password)
-    await session.commit()
-
-
-async def set_auth(session: Session, email: str):
-    user = await get_user_by_email(session, email)
-
-    user.all()[0][0].last_auth = datetime.datetime.now()
-    await session.commit()
+        user.password = await self.password_manager.create_password(password)
+        await self.session.delete(token)
+        await self.session.commit()

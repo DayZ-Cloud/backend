@@ -1,10 +1,7 @@
-import os
 from _socket import gaierror
 
-import aiohttp
-import requests
-from fastapi import HTTPException
-from sqlalchemy import Column, Integer, String, ForeignKey
+import uuid as uuid
+from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from steam import game_servers as gs
 from database import base, CustomBase
@@ -12,7 +9,7 @@ from database import base, CustomBase
 
 class Servers(base, CustomBase):
     __tablename__ = 'servers'
-    uuid = Column(UUID, nullable=False, unique=True, primary_key=True)
+    uuid = Column(UUID, nullable=False, unique=True, primary_key=True, default=uuid.uuid4)
     server_name = Column(String)
     ip_address = Column(String)
     game_port = Column(String)

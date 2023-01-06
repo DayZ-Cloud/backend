@@ -42,9 +42,9 @@ class CustomBase:
         :return: словарь с элементами
         """
         if self.BLACKLIST:
-            return {k: v for k, v in self.__dict__.items() if not k.startswith("_") and k not in self.BLACKLIST}
+            return {k: int(v) if isinstance(v, int) else str(v) for k, v in self.__dict__.items() if not k.startswith("_") and k not in self.BLACKLIST}
 
         if self.WHITELIST:
-            return {k: v for k, v in self.__dict__.items() if not k.startswith("_") and k in self.WHITELIST}
+            return {k: int(v) if isinstance(v, int) else str(v) for k, v in self.__dict__.items() if not k.startswith("_") and k in self.WHITELIST}
 
         return self.get_fields()
