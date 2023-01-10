@@ -45,5 +45,9 @@ class TokenReturn(BaseModel):
     refresh_token: str
 
 
-class RegistrationError(BaseModel):
+class DefaultError(BaseModel):
     detail: str
+
+
+class DefaultOk(BaseModel):
+    status: str

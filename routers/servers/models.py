@@ -21,8 +21,9 @@ class Servers(base, CustomBase):
 
     async def get_online(self):
         try:
-            server = gs.a2s_info((self.ip_address, int(self.query_port)))
-        except gaierror:
+            server = gs.a2s_info((self.ip_address, int(self.query_port)), timeout=0.5)
+            print(server)
+        except (gaierror, TimeoutError, ConnectionRefusedError):
             return {"max_players": 0, "players": 0, "status": "offline"}
 
         return {"max_players": server["max_players"], "players": server["players"], "status": "online"}

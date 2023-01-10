@@ -3,18 +3,12 @@ import os
 from typing import Dict, Any
 from uuid import uuid4
 
-from fastapi import Security, Header, HTTPException
+from fastapi import Security, Header, HTTPException, Depends
 from fastapi.security import HTTPBearer
-from fastapi_jwt import JwtAccessBearerCookie, JwtRefreshBearerCookie
 from jose import jwt
-from jose.exceptions import JWKError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-from database import get_session, async_session
-
-
-# access_security = JwtAccessBearerCookie(secret_key=os.getenv("ACCESS_KEY"), auto_error=True)
-# refresh_security = JwtRefreshBearerCookie(secret_key=os.getenv("ACCESS_KEY"), auto_error=True)
+from routers.authorization.service import Service
 
 
 class JWTController:
@@ -82,16 +76,16 @@ class DefaultVerifier:
         payload = await self._decode(token)
         return payload
 
-    async def _get_credentials(self, token, type):
+    async def _get_credentials(self, token, payload_type):
         payload = await self._get_payload(token)
 
         if payload is None:
             return None
 
-        if "type" not in payload or payload["type"] != type:
+        if "type" not in payload or payload["type"] != payload_type:
             raise HTTPException(
                 status_code=HTTP_401_UNAUTHORIZED,
-                detail=f"Wrong token: 'type' is not '{type}'",
+                detail=f"Wrong token: 'type' is not '{payload_type}'",
             )
 
         return Credentials(payload["subject"], payload.get("jti", None))
@@ -116,22 +110,29 @@ class DefaultVerifier:
 
 
 class AccessVerifier(DefaultVerifier, JWTController):
-    async def __call__(self, _bearer: JwtBearer = Security(JwtBearer())):
+    async def __call__(self, _bearer: JwtBearer = Security(JwtBearer()), service: Service = Depends(Service)):
         if _bearer is None:
             raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Credentials are not provided.")
 
-        user_id = await self._get_credentials(_bearer.credentials, "access")
-        return user_id
-        # if (await get_user_by_id(async_session(), user_id["id"])).scalars().all():
-        #     return user_id
+        user = await self._get_credentials(_bearer.credentials, "access")
+
+        if await service.check_user_exists(user_id=user["id"]):
+            return user
 
         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="User not exists")
 
 
 class RefreshVerifier(DefaultVerifier, JWTController):
-    async def __call__(self, x_refresh_token: str | None = Header(None)):
+    async def __call__(self, x_refresh_token: str | None = Header(None), service: Service = Depends(Service)):
+
         if x_refresh_token is None:
             raise HTTPException(status_code=HTTP_401_UNAUTHORIZED,
                                 detail="Credentials are not provided. Insert into header key 'X-Refresh-Token'")
-        return await self._get_credentials(x_refresh_token, "refresh")
+
+        user = await self._get_credentials(x_refresh_token, "refresh")
+
+        if not await service.check_user_exists(user_id=user["id"]):
+            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="User not exists")
+
+        return user
 

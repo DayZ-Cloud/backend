@@ -1,7 +1,9 @@
 from pydantic import BaseModel
 
 
-class GetStat(BaseModel):
-    response: str
+class GetUsersCount(BaseModel):
+    users_count: int
 
 
+class GetServersCount(BaseModel):
+    servers_count: int

@@ -23,6 +23,21 @@ class OneNews(BaseModel):
     link: str | None
     created: datetime
 
+    class Config:
+        schema_extra = {
+            'examples': [
+                {"response": [{
+                    "id": 1,
+                    "index": 5,
+                    "title": "Экстренное обновление ядра",
+                    "description": "Сегодня ночью произойдет обновление ядра системы. Это необходимо для сохранности и безопасности ваших данных.",
+                    "preview_img": "https://i.imgur.com/S1OPVB6.jpeg",
+                    "link": "http://discord.gg/hvUr2UGHSV",
+                    "created": datetime.now()
+                }]}
+            ]
+        }
+
 
 class GetCreated(BaseModel):
     response: OneNews
@@ -40,24 +55,5 @@ class GetCreated(BaseModel):
                     "link": "http://discord.gg/hvUr2UGHSV",
                     "created": datetime.now()
                 }}
-            ]
-        }
-
-
-class GetNews(BaseModel):
-    response: list[OneNews]
-
-    class Config:
-        schema_extra = {
-            'examples': [
-                {"response": [{
-                    "id": 1,
-                    "index": 5,
-                    "title": "Экстренное обновление ядра",
-                    "description": "Сегодня ночью произойдет обновление ядра системы. Это необходимо для сохранности и безопасности ваших данных.",
-                    "preview_img": "https://i.imgur.com/S1OPVB6.jpeg",
-                    "link": "http://discord.gg/hvUr2UGHSV",
-                    "created": datetime.now()
-                }]}
             ]
         }

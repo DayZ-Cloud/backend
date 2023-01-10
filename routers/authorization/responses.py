@@ -1,2 +1,11 @@
 class Responses:
+    SAME_PASSWORDS = "The old and new passwords are the same"
+    NOT_VALID_EMAIL = "Not a valid email address"
+    EMAIL_EXISTS = "This email already exists"
     DEFAULT_OK = "ok"
+    EMAIL_OR_PASSWORD_NF = "This email or password not found."
+    USER_NOT_EXISTS = "User not exists"
+    RESET_PASSWORD_NOT_CORRECT = "Old password not correct"
+    RECENT_EXPIRED = "This token and key expired"
+    RECENT_NOT_FOUND = "This token or key not found."
+    NOT_VALID_CYRILLIC_OR_LENGTH = "Password may contain only a-Z 0-9 and his length must be more than 8 characters"

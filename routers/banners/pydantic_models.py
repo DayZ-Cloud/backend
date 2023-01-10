@@ -22,7 +22,3 @@ class Banner(BaseModel):
     background_image: str | None
     link: str | None
     created: datetime
-
-
-class GetBanners(BaseModel):
-    response: list[Banner]

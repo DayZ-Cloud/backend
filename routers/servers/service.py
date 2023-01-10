@@ -15,7 +15,8 @@ class Service:
         return query.scalars().all()
 
     async def create_server(self, server: dict):
-        query = await self.session.execute(exists().where(Servers.ip_address == server["ip_address"]).select())
+        query = exists().where(Servers.ip_address == server["ip_address"], Servers.query_port == server["query_port"]).select()
+        query = await self.session.execute(query)
 
         if query.scalar():
             raise HTTPException(status_code=400, detail="This IP-Address already exists.")

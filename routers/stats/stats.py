@@ -1,25 +1,18 @@
 from fastapi import APIRouter, Depends, Security
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession as Session
-
-from database import get_session
-from jwt_securities import access_security, JAC
-from routers.authorization.models import Clients
-from routers.servers.models import Servers
-from routers.stats.pydantic_models import GetStat
+from jwt_securities import access_security
+from routers.stats.pydantic_models import GetUsersCount, GetServersCount
+from routers.stats.services import Service
 
 router = APIRouter()
 
 
-@router.get("/count/users/", response_model=GetStat)
-async def get_users_count(db: Session = Depends(get_session),
-                          credentials: JAC = Security(access_security)):
-    count_users = len((await db.execute(select(Clients))).scalars().all())
-    return {"response": count_users}
+@router.get("/count/users/", responses={200: {"model": GetUsersCount}}, dependencies=[Security(access_security)])
+async def get_users_count(service: Service = Depends(Service)):
+    count_users = await service.get_users_count()
+    return {"users_count": count_users}
 
 
-@router.get("/count/servers/", response_model=GetStat)
-async def get_servers_count(db: Session = Depends(get_session),
-                            credentials: JAC = Security(access_security)):
-    count_servers = len((await db.execute(select(Servers))).scalars().all())
-    return {"response": count_servers}
+@router.get("/count/servers/", responses={200: {"model": GetServersCount}}, dependencies=[Security(access_security)])
+async def get_servers_count(service: Service = Depends(Service)):
+    count_servers = await service.get_servers_count()
+    return {"servers_count": count_servers}

@@ -8,7 +8,8 @@ from routers.news import news
 from routers.stats import stats
 from routers.servers import servers
 
-app = FastAPI()
+app = FastAPI(title="DayZ Cloud",
+              version='1.2.2')
 
 router = APIRouter(prefix="/api/v1")
 admin_panel_router = APIRouter(prefix="/apanel")

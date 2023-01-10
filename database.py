@@ -1,4 +1,6 @@
 from os import getenv
+from types import NoneType
+from typing import Any
 
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -36,15 +38,23 @@ class CustomBase:
         """
         return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
 
+    def filter(self, value: Any):
+        if isinstance(value, (int, NoneType)):
+            return value
+
+        return str(value)
+
     def get_security_fields(self):
         """
         Вывод элементов из черного или белого списка, в зависимости от того, какой пустой
         :return: словарь с элементами
         """
         if self.BLACKLIST:
-            return {k: int(v) if isinstance(v, int) else str(v) for k, v in self.__dict__.items() if not k.startswith("_") and k not in self.BLACKLIST}
+            return {k: self.filter(v) for k, v in self.__dict__.items() if
+                    not k.startswith("_") and k not in self.BLACKLIST}
 
         if self.WHITELIST:
-            return {k: int(v) if isinstance(v, int) else str(v) for k, v in self.__dict__.items() if not k.startswith("_") and k in self.WHITELIST}
+            return {k: self.filter(v) for k, v in self.__dict__.items() if
+                    not k.startswith("_") and k in self.WHITELIST}
 
         return self.get_fields()

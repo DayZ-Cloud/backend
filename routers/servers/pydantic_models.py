@@ -32,5 +32,9 @@ class Server(BaseModel):
     uuid: str
 
 
-class GetServers(BaseModel):
-    response: list[Server]
+class DefaultError(BaseModel):
+    detail: str
+
+
+class DefaultOk(BaseModel):
+    status: str
