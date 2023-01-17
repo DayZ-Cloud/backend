@@ -1,5 +1,10 @@
-from fastapi import APIRouter, Depends, Security, HTTPException, Form
+import time
 
+from celery.result import AsyncResult
+from fastapi import APIRouter, Depends, Security, HTTPException, Form
+from starlette.background import BackgroundTasks
+
+import celery_handler
 from jwt_securities import access_security, JAC
 from routers.servers.pydantic_models import CreateServer, ResponseCreateServer, Server, DefaultOk, DefaultError
 from routers.servers.responses import Responses
@@ -17,6 +22,23 @@ async def get_servers(service: Service = Depends(Service), credentials: JAC = Se
     servers = [server.get_security_fields() | await server.get_online() for server in servers]
 
     return servers
+
+
+def mess(mess):
+    print(mess)
+
+
+def bbt(move):
+    print(move.get(on_message=mess, propagate=False))
+
+
+@router.post("/servers/{uuid}/deploy")
+async def deploy_server(uuid: str,
+                        service: Service = Depends(Service),
+                        credentials: JAC = Security(access_security)
+                        ):
+    task = celery_handler.celery_app.send_task("celery_handler.deploy_worker", ["xui"])
+    return {"status": Responses.DEFAULT_OK, "task_id": task.id}
 
 
 @router.delete("/servers/{uuid}", responses={200: {"model": DefaultOk}, 400: {"model": DefaultError}})

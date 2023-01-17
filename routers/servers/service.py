@@ -1,7 +1,9 @@
+import celery
 from fastapi import HTTPException, Depends
 from sqlalchemy import select, exists
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from celery_handler import celery_app
 from database import get_session
 from routers.servers.models import Servers
 
@@ -31,7 +33,7 @@ class Service:
         query = await self.session.execute(select(Servers).where(Servers.uuid == server_uuid, Servers.owner_id == user))
         return query.scalars().first()
 
-    async def delete_server_db(self, user: int, server_uuid: str):
+    async def delete_server_db(self, user: str, server_uuid: str):
         query = await self.session.execute(select(Servers).where(Servers.uuid == server_uuid, Servers.owner_id == user))
         instance = query.scalars().first()
 

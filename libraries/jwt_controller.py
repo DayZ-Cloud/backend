@@ -78,7 +78,6 @@ class DefaultVerifier:
 
     async def _get_credentials(self, token, payload_type):
         payload = await self._get_payload(token)
-
         if payload is None:
             return None
 
